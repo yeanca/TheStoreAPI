@@ -277,69 +277,140 @@ namespace TheStoreAPI.Controllers
             }
         }
 
-        [HttpGet("department/{categoryId}")]
-        public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByDepartment(int categoryId, int pageIndex = 0, int pageSize = DefaultPageSize)
+        [HttpGet("products/{urlId?}")]
+        public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProducts(    string? urlId = null,    int? sortId = null,    int pageIndex = 0,    int pageSize = DefaultPageSize)
         {
-            _logger.LogInformation("GetProductsByDepartment called for CategoryId: {CategoryId}, PageIndex: {PageIndex}, PageSize: {PageSize}", categoryId, pageIndex, pageSize);
+            _logger.LogInformation("GetProducts called with urlId: {UrlId}, SortId: {SortId}, PageIndex: {PageIndex}, PageSize: {PageSize}",
+                urlId, sortId, pageIndex, pageSize);
 
             if (pageIndex < 0) pageIndex = 0;
             if (pageSize <= 0 || pageSize > MaxPageSize) pageSize = DefaultPageSize;
 
+            
+            int? categoryId = null;
+            int? colorId = null;
+            int? materialId = null;
+            int? brandId = null;
+
+            
+            if (!string.IsNullOrEmpty(urlId)) // the url comes in this format: 10018-10023-93894-0-men-shoes?sortId=3
+            {
+                var parts = urlId.Split('-');
+
+                
+                if (parts.Length > 0 && int.TryParse(parts[0], out int parsedCategoryId))
+                {
+                    categoryId = parsedCategoryId;
+                }
+
+              
+                if (parts.Length > 1 && int.TryParse(parts[1], out int parsedColorId))
+                {
+                    colorId = parsedColorId;
+                }
+
+                if (parts.Length > 2 && int.TryParse(parts[2], out int parsedMaterialId))
+                {
+                    materialId = parsedMaterialId;
+                }
+                if (parts.Length > 3 && int.TryParse(parts[3], out int parsedBrandId))
+                {
+                    brandId = parsedBrandId;
+                }
+            }
+
             try
             {
-                var query = _context.Products
+                
+                IQueryable<Product> query = _context.Products
                     .AsNoTracking()
-                    .Where(p => p.CategoryId == categoryId && p.IsActive && !p.IsDeleted && p.TotalStockQuantity > 0)
-                    .OrderBy(p => p.Name)
-                    .Skip(pageIndex * pageSize)
-                    .Take(pageSize)
-                    .Include(p => p.Category)
-                    .Include(p => p.Brand)
-                    .Include(p => p.Color)
-                    .Include(p => p.Material)
-                    .Include(p => p.ProductImages)
-                    .Include(p => p.ProductSizes).ThenInclude(ps => ps.Size)
-                    .Include(p => p.ProductAttributes).ThenInclude(pa => pa.Attribute);
+                    .Where(p => p.IsActive && !p.IsDeleted && p.TotalStockQuantity > 0);
 
-                var products = await query.ToListAsync();
-
-                var productDtos = products.Select(p => new ProductDTO
+             
+                if (categoryId.HasValue && categoryId.Value > 0)
                 {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Description = p.Description,
-                    Price = p.Price,
-                    MainImageUrl = p.MainImageUrl,
-                    TotalStockQuantity = p.TotalStockQuantity,
-                    IsActive = p.IsActive,
-                    CategoryName = p.Category?.Name,
-                    BrandName = p.Brand?.Name,
-                    ColorName = p.Color?.Name,
-                    MaterialName = p.Material?.Name,
-                    Sizes = p.ProductSizes?.Select(ps => new ProductSizeDto
-                    {
-                        TrackingId = ps.TrackingId,
-                        SizeName = ps.Size.Name,
-                        StockQuantity = ps.StockQuantity
-                    }).ToList(),
-                    OtherImages = p.ProductImages?.Select(pi => new ProductImageDto
-                    {
-                        Id = pi.Id,
-                        ImageUrl = pi.ImageUrl
-                    }).ToList(),
-                    Attributes = p.ProductAttributes?.Select(pa => new ProductAttributeDto
-                    {
-                        AttributeName = pa.Attribute.Name,
-                        Value = pa.Value
-                    }).ToList()
-                }).ToList();
+                    query = query.Where(p => p.CategoryId == categoryId.Value);
+                }
+                if (colorId.HasValue && colorId.Value > 0)
+                {
+                    query = query.Where(p => p.ColorId == colorId.Value);
+                }
+                if (materialId.HasValue && materialId.Value > 0)
+                {
+                    query = query.Where(p => p.MaterialId == materialId.Value);
+                }
+                if (brandId.HasValue && brandId.Value > 0)
+                {
+                    query = query.Where(p => p.BrandId == brandId.Value);
+                }
 
-                _logger.LogInformation("Retrieved {Count} products for department {CategoryId}.", productDtos.Count, categoryId);
+
+                switch (sortId)
+                {
+                    case 1: // Newest first
+                        query = query.OrderByDescending(p => p.CreatedAt);
+                        break;
+                    case 2: // Price High to Low
+                        query = query.OrderByDescending(p => p.Price);
+                        break;
+                    case 3: // Price Low to High
+                        query = query.OrderBy(p => p.Price);
+                        break;
+                    case 4: // Title A-Z
+                        query = query.OrderBy(p => p.Name);
+                        break;
+                    case 5: // Title Z-A
+                        query = query.OrderByDescending(p => p.Name);
+                        break;
+                    default: // Default sort by Name
+                        query = query.OrderBy(p => p.Name);
+                        break;
+                }
+
+               
+                var pagedQuery = query.Skip(pageIndex * pageSize).Take(pageSize);
+
+               
+                var productDtos = await pagedQuery
+                    .Select(p => new ProductDTO
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Price = p.Price,
+                        MainImageUrl = p.MainImageUrl,
+                        TotalStockQuantity = p.TotalStockQuantity,
+                        IsActive = p.IsActive,
+                        CategoryName = p.Category.Name,
+                        BrandName = p.Brand.Name,
+                        ColorName = p.Color.Name,
+                        MaterialName = p.Material.Name,
+                        Sizes = p.ProductSizes.Select(ps => new ProductSizeDto
+                        {
+                            TrackingId = ps.TrackingId,
+                            SizeName = ps.Size.Name,
+                            StockQuantity = ps.StockQuantity
+                        }).ToList(),
+                        OtherImages = p.ProductImages.Select(pi => new ProductImageDto
+                        {
+                            Id = pi.Id,
+                            ImageUrl = pi.ImageUrl
+                        }).ToList(),
+                        Attributes = p.ProductAttributes.Select(pa => new ProductAttributeDto
+                        {
+                            AttributeName = pa.Attribute.Name,
+                            Value = pa.Value
+                        }).ToList()
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {Count} products. Filters applied: CategoryId: {CategoryId}, ColorId: {ColorId}, MaterialId: {MaterialId}, BrandId: {BrandId}, SortId: {SortId}",
+                    productDtos.Count, categoryId, colorId, materialId, brandId, sortId);
                 return Ok(productDtos);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while retrieving products for department {CategoryId}.", categoryId);
+                _logger.LogError(ex, "An error occurred while retrieving products with the given parameters.");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred processing your request.");
             }
         }
