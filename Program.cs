@@ -3,14 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Reflection;
 using TheStoreAPI.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// Add services to the container.
 builder.Services.AddControllers();
 
-
+// JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -19,11 +20,10 @@ builder.Services.AddAuthentication(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = false, // Set to true for production with a defined issuer
-        ValidateAudience = false, // Set to true for production with a defined audience
+        ValidateIssuer = false,
+        ValidateAudience = false,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        // The key used to sign the token must be the same on both ends
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("RealMadridIsTheBestClubInTheW0rldAllOtherClubsAreAmateurs"))
     };
 });
@@ -37,7 +37,6 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "API for managing The Store backend"
     });
-    // Add security definition for JWT to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -47,7 +46,6 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Scheme = "Bearer"
     });
-    // Add security requirements for all endpoints that use authentication
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -62,6 +60,11 @@ builder.Services.AddSwaggerGen(options =>
             new string[] {}
         }
     });
+
+    // Add this new section to read the XML documentation file
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
 });
 
 builder.Services.AddDbContext<TheStoreDbContext>(options =>
@@ -71,7 +74,11 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "The Store API V1");
+    c.RoutePrefix = string.Empty;
+});
 
 app.UseHttpsRedirection();
 

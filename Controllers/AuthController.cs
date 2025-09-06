@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace TheStoreAPI.Controllers
 {
+    /// <summary>
+    /// This controller handles authentication for anonymous users by generating JWT tokens.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
@@ -19,6 +22,10 @@ namespace TheStoreAPI.Controllers
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Generates an anonymous JWT token for a user.
+        /// </summary>
+        /// <returns>A valid JWT token string.</returns>
         [HttpGet("token")]
         [AllowAnonymous]
         public IActionResult GenerateAnonymousToken()

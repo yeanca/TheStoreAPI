@@ -6,6 +6,9 @@ using TheStoreAPI.Infrastructure.DTOs;
 
 namespace TheStoreAPI.Controllers
 {
+    /// <summary>
+    /// This controller handles all product catalog operations.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class ProductController : ControllerBase
@@ -22,6 +25,11 @@ namespace TheStoreAPI.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// Retrieves a single product by its ID.
+        /// </summary>
+        /// <param name="id">The unique ID of the product.</param>
+        /// <returns>A detailed view of the product, or a 404 if not found.</returns>
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductDTO>> GetProduct(int id)
         {
@@ -94,6 +102,11 @@ namespace TheStoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Creates a new product.
+        /// </summary>
+        /// <param name="productDto">The product creation DTO.</param>
+        /// <returns>A confirmation of the created product.</returns>
         [HttpPost]
         public async Task<ActionResult<ProductDTO>> CreateProduct([FromBody] ProductCreateDto productDto)
         {
@@ -189,6 +202,11 @@ namespace TheStoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Updates an existing product.
+        /// </summary>
+        /// <param name="id">The unique ID of the product to update.</param>
+        /// <param name="productDto">The DTO containing the updated details.</param>
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateDto productDto)
         {
@@ -245,7 +263,10 @@ namespace TheStoreAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred processing your request.");
             }
         }
-
+        /// <summary>
+        /// Soft deletes a product by its ID.
+        /// </summary>
+        /// <param name="id">The unique ID of the product.</param>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
@@ -277,6 +298,14 @@ namespace TheStoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves a list of products based on various filters.
+        /// </summary>
+        /// <param name="urlId">A hyphen-separated string of IDs for filtering.</param>
+        /// <param name="sortId">An integer to sort the results.</param>
+        /// <param name="pageIndex">The page number to retrieve.</param>
+        /// <param name="pageSize">The number of products per page.</param>
+        /// <returns>A paginated list of products.</returns>
         [HttpGet("products/{urlId?}")]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProducts(    string? urlId = null,    int? sortId = null,    int pageIndex = 0,    int pageSize = DefaultPageSize)
         {
@@ -415,6 +444,12 @@ namespace TheStoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves a paginated list of featured products.
+        /// </summary>
+        /// <param name="pageIndex">The page number to retrieve.</param>
+        /// <param name="pageSize">The number of products per page.</param>
+        /// <returns>A paginated list of featured products.</returns>
         [HttpGet("featured")]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetFeaturedProducts(int pageIndex = 0, int pageSize = DefaultPageSize)
         {

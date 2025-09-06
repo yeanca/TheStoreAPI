@@ -8,6 +8,9 @@ using TheStoreAPI.Infrastructure.Enums;
 
 namespace TheStoreAPI.Controllers
 {
+    /// <summary>
+    /// This controller manages all order-related operations, including shopping cart management and checkout.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -24,7 +27,10 @@ namespace TheStoreAPI.Controllers
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
-
+        /// <summary>
+        /// Gets the active order (shopping cart) for the authenticated user.
+        /// </summary>
+        /// <returns>The active order details.</returns>
         [HttpGet("active")]
         public async Task<ActionResult<OrderDto>> GetActiveOrder()
         {
@@ -75,7 +81,10 @@ namespace TheStoreAPI.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// Adds a new item to an existing active order or creates a new one if none exists.
+        /// </summary>
+        /// <param name="itemDto">A JSON object with the product's trackingId and quantity.</param>
         [HttpPost("add-to-cart")]
         public async Task<ActionResult<OrderConfirmationDto>> AddToCart([FromBody] OrderItemCreateDto itemDto)
         {
@@ -167,6 +176,11 @@ namespace TheStoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves a specific order by its unique ID. This endpoint does not require a bearer token.
+        /// </summary>
+        /// <param name="orderId">The unique ID of the order.</param>
+        /// <returns>A detailed view of the order.</returns>
         [HttpGet("{orderId}")]
         [AllowAnonymous] 
         public async Task<ActionResult<OrderDto>> GetOrderById(long orderId)
@@ -219,7 +233,10 @@ namespace TheStoreAPI.Controllers
             }
         }
 
-
+        /// <summary>
+        /// Removes an item from the active order.
+        /// </summary>
+        /// <param name="orderItemId">The unique ID of the order item to remove.</param>
         [HttpDelete("remove-item/{orderItemId}")]
         public async Task<IActionResult> RemoveOrderItem(int orderItemId)
         {
@@ -287,7 +304,9 @@ namespace TheStoreAPI.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// Finalizes the active order and processes the checkout.
+        /// </summary>
         [HttpPost("checkout")]
         public async Task<ActionResult<OrderConfirmationDto>> Checkout()
         {
